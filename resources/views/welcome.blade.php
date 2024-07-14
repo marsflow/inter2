@@ -94,9 +94,11 @@
                             <td>${data['quantity'] * data['price']}</td>
                         </tr>`);
 
-                    setTimeout(() => {
-                        updateTotal();
-                    }, 0);
+                    let total = $('[data-total]').html();
+                    $('[data-total]').html(
+                        parseInt(total) + (parseInt(data['quantity']) * parseInt(data['price']))
+                    );
+
                     e.reset();
                 });
 
