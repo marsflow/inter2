@@ -42,34 +42,80 @@
                         <th scope="col">Price per Item</th>
                         <th scope="col">Date Submited</th>
                         <th scope="col">Total Value In Number</th>
+                        <th scope="col">Action</th>
                     </tr>
                 </thead>
-                <tbody data-rows>
-                    @foreach ($data as $key => $value)
-                        <tr>
-                            <td>{{ $value['name'] }}</td>
-                            <td>{{ $value['quantity'] }}</td>
-                            <td>{{ $value['price'] }}</td>
-                            <td>{{ $value['timestamp'] }}</td>
-                            <td data-value>{{ $value['quantity'] * $value['price'] }}</td>
-                        </tr>
-                    @endforeach
-                    <tr>
-                        <th colspan="4">Total</th>
-                        <th data-total>harga</th>
-                    </tr>
-                </tbody>
+                <tbody data-rows></tbody>
             </table>
+        </div>
+
+        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="exampleModalLabel">Edit</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="EditForm" method="PUT" onsubmit="event.preventDefault(); handleSubmit(this)">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="exampleFormControlInput1" class="form-label">Product Name</label>
+                                <input type="text" name="name" class="form-control" required id="exampleFormControlInput1">
+                            </div>
+                            <div class="mb-3">
+                                <label for="exampleFormControlInput1" class="form-label">Quantity In Stock</label>
+                                <input type="number" name="quantity" step="0.01" class="form-control" required id="exampleFormControlInput1">
+                            </div>
+                            <div class="mb-3">
+                                <label for="exampleFormControlInput1" class="form-label">Price Per Item</label>
+                                <input type="number" name="price" step="0.01" class="form-control" required id="exampleFormControlInput1">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" form="EditForm" class="btn btn-primary">Update</button>
+                    </div>
+                </div>
+            </div>
         </div>
         <script>
 
-            function updateTotal() {
-                let val = 0;
-                $('[data-value]').each(function (key, value) {
-                    val = val + parseInt(value.innerHTML);
-                });
+            let storage = @json($data)
 
-                $('[data-total]').html(val);
+            let myModal = new bootstrap.Modal(document.getElementById('exampleModal'), {});
+
+            function updateTotal() {
+                let total = 0;
+                let output = storage.reduce((acc, item) => {
+                    total += parseInt(item['quantity'] * item['price']);
+                    acc += `<tr>
+                        <td>${item['name']}</td>
+                        <td align="right">${item['quantity']}</td>
+                        <td align="right">${item['price']}</td>
+                        <td>${item['timestamp']}</td>
+                        <td align="right">${item['quantity'] * item['price']}</td>
+                        <td><button class="btn btn-secondary btn-sm" onclick="handleModal('${item['id']}')">Edit</button></td>
+                    </tr>`;
+                    return acc;
+                }, '');
+
+                output += `<tr>
+                    <th colspan="4">Total</th>
+                    <th align="right" style="text-align: right;">${total}</th>
+                    </tr>`;
+
+                $('[data-rows]').html(output);
+            }
+
+            function handleModal(id) {
+                myModal.show();
+                $('#EditForm').prop('action', `{{ route('update', '_id') }}`.replace('_id', id));
+                const data = storage.find((item) => item.id === id);
+                $('#EditForm input[name="name"]').val(data.name);
+                $('#EditForm input[name="quantity"]').val(data.quantity);
+                $('#EditForm input[name="price"]').val(data.price);
             }
 
             $(function () {
@@ -86,19 +132,24 @@
                     method: method,
                     data: data,
                 }).then(function (data) {
-                    $('[data-rows]').prepend(`<tr>
-                            <td>${data['name']}</td>
-                            <td>${data['quantity']}</td>
-                            <td>${data['price']}</td>
-                            <td>${data['timestamp']}</td>
-                            <td>${data['quantity'] * data['price']}</td>
-                        </tr>`);
+                    const exist = storage.find((item) => item.id === data.id);
+                    if (exist) {
+                        storage = storage.map(function (item) {
+                            if (item.id === data.id) {
+                                return {
+                                    item,
+                                    ...data,
+                                }
+                            }
 
-                    let total = $('[data-total]').html();
-                    $('[data-total]').html(
-                        parseInt(total) + (parseInt(data['quantity']) * parseInt(data['price']))
-                    );
+                            return item;
+                        });
+                        myModal.hide();
+                    } else {
+                        storage = [data, ...storage];
+                    }
 
+                    updateTotal();
                     e.reset();
                 });
 

@@ -36,6 +36,7 @@ class WelcomeController extends Controller
     {
 
         $input = $request->except(['_token']);
+        $input['id'] = uniqid();
         $input['timestamp'] = now();
         if (false === Storage::disk('local')->exists('data.json')) {
             Storage::disk('local')->put('data.json', json_encode([$input]));
@@ -71,7 +72,18 @@ class WelcomeController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        if (false === Storage::disk('local')->exists('data.json')) {
+            return response()->json(null);
+        }
+
+        $data = Storage::disk('local')->get('data.json');
+        $data = json_decode($data, true);
+        $key = array_search($id, array_column($data, 'id'));
+        $input = array_replace($data[$key], $request->except(['_token']));
+        $data[$key] = $input;
+        Storage::disk('local')->put('data.json', json_encode($data));
+
+        return response()->json($input);
     }
 
     /**

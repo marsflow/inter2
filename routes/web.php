@@ -14,4 +14,6 @@ use App\Http\Controllers\WelcomeController;
 |
 */
 
-Route::resource('/', WelcomeController::class);
+Route::resource('/', WelcomeController::class)->except('update');
+Route::put('/{id}', [WelcomeController::class, 'update'])->name('update');
+
